@@ -17,5 +17,5 @@ Docker image to OCR images. Jobs pulled from AWS SQS, files stored in S3
 {
 "ocr_input_file":"test.png"
 }
-´´´
+```
 ocr_input_file should contain the key to the input file in AWS_S3_OCR_INPUT input bucket
