@@ -1,0 +1,4 @@
+.awsconfig
+node_modules
+tmp
+package-lock.json
