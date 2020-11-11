@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+// Rimraf to clean up temp dir
+const rimraf = require('rimraf');
 // Load tesseract.js for OCR
 const Tesseract = require('tesseract.js');
 // Load the AWS SDK for Node.js
@@ -20,7 +22,7 @@ var queueURL = process.env.AWS_SQS_QUEUE_URL;
 var S3input = process.env.AWS_S3_OCR_INPUT;
 
 // ARN to OCR Output Bucket
-var S3output = process.env.AWS_S3_OCR_INPUT;
+var S3output = process.env.AWS_S3_OCR_OUTPUT;
 
 // Temp Dir
 var tmpDir = process.env.OCR_TEMP_DIR || './tmp';
@@ -82,7 +84,9 @@ const processMessage = (message, callback) => {
       console.log("Downloaded", payload.ocr_input_file, "to", tmpDir);
       doOCR(payload.ocr_input_file, () => {
         uploadFileToResultBucket(payload.ocr_input_file + '.txt', () => {
-          callback(null);
+          cleanUpTemp(()=>{
+            callback(null);
+          })
         });
       });
     })
@@ -131,6 +135,12 @@ const uploadFileToResultBucket = (file, callback) => {
       callback();
     }
   });
+}
+
+// Cleanup temp dir
+const cleanUpTemp = (callback) => {
+  console.log("Cleaning up temp directory")
+  rimraf(path.join(tmpDir,"*"), callback);
 }
 
 // OCR Function calling Tesseract.js

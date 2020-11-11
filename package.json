@@ -18,6 +18,7 @@
   "homepage": "https://github.com/bpauwels/docker-sqs-ocr#readme",
   "dependencies": {
     "aws-sdk": "^2.789.0",
+    "rimraf": "^3.0.2",
     "tesseract.js": "^2.1.4"
   }
 }
