@@ -51,6 +51,13 @@ const receiveAndProcess = () => {
         processMessage(data.Messages[0], (err) => {
           if (err) {
             console.log("Error processing message", err)
+            deleteMessage(data.Messages[0], (err, data) => {
+              if (err) {
+                console.log("Delete Error", err);
+              } else {
+                console.log("Message Deleted", data);
+              }
+            });
           } else {
             deleteMessage(data.Messages[0], (err, data) => {
               if (err) {
@@ -59,7 +66,7 @@ const receiveAndProcess = () => {
                 console.log("Message Deleted", data);
                 receiveAndProcess();
               }
-            })
+            });
           }
         });
       } else {
@@ -73,17 +80,57 @@ const receiveAndProcess = () => {
 }
 
 // Process a received message
+/* Example Message:
+{
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "awsRegion": "eu-west-1",
+      "eventTime": "2020-11-16T19:10:20.178Z",
+      "eventName": "ObjectCreated:Put",
+      "userIdentity": {
+        "principalId": "example"
+      },
+      "requestParameters": {
+        "sourceIPAddress": "10.20.30.40"
+      },
+      "responseElements": {
+        "x-amz-request-id": "...",
+        "x-amz-id-2": "..."
+      },
+      "s3": {
+        "s3SchemaVersion": "1.0",
+        "configurationId": "09c216f5-caa0-4b93-9853-a86dbbf9a8b5",
+        "bucket": {
+          "name": "inputbucket",
+          "ownerIdentity": {
+            "principalId": "..."
+          },
+          "arn": "arn:aws:s3:::inputbucket"
+        },
+        "object": {
+          "key": "demo.png",
+          "size": 70668,
+          "eTag": "f5e86c36a7874ba2492b0143ec56360d",
+          "sequencer": "005FB2CE9EA7BE0F74"
+        }
+      }
+    }
+  ]
+}
+*/
 const processMessage = (message, callback) => {
   try {
-    var payload = JSON.parse(message.Body);
+    var payload = JSON.parse(message.Body).Records[0];
   } catch (e) {
     callback("Invalid JSON format for message body. " + e)
   }
-  if (payload.ocr_input_file) {
-    downloadFileToTemp(payload.ocr_input_file, () => {
-      console.log("Downloaded", payload.ocr_input_file, "to", tmpDir);
-      doOCR(payload.ocr_input_file, () => {
-        uploadFileToResultBucket(payload.ocr_input_file + '.txt', () => {
+  if (payload&&payload.eventName&&payload.eventName=="ObjectCreated:Put") {
+    downloadFileToTemp(payload.s3.object.key, () => {
+      console.log("Downloaded", payload.s3.object.key, "to", tmpDir);
+      doOCR(payload.s3.object.key, () => {
+        uploadFileToResultBucket(payload.s3.object.key + '.txt', () => {
           cleanUpTemp(()=>{
             callback(null);
           })
@@ -145,7 +192,7 @@ const cleanUpTemp = (callback) => {
 
 // OCR Function calling Tesseract.js
 const doOCR = (file, callback) => {
-  console.log("Starting OCR work... this might take some time")
+  console.log("Starting OCR work... this might take some time");
   Tesseract.recognize(
     path.join(tmpDir, file),
     'eng',
